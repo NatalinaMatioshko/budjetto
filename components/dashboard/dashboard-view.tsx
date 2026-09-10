@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useLocalBudget } from "@/components/providers/local-budget-provider";
 import { BudgetProgress } from "@/components/budgets/budget-progress";
 import { TransactionList } from "@/components/transactions/transaction-list";
+import { ShoppingList } from "@/components/shopping/shopping-list";
 
 export function DashboardView() {
   const {
@@ -22,6 +23,10 @@ export function DashboardView() {
     monthIncome,
     budgetsWithProgress,
     transactionsWithRelations,
+    pendingShopping,
+    pendingShoppingTotal,
+    toggleShoppingBought,
+    deleteShoppingItem,
     resetData,
   } = useLocalBudget();
 
@@ -31,21 +36,27 @@ export function DashboardView() {
 
   const summary = [
     {
-      label: "Total balance",
+      label: "Залишок",
       value: formatCurrency(totalBalance),
-      hint: "Across all accounts",
+      hint: "Після планових витрат",
       tone: "text-primary-700",
     },
     {
-      label: "Spent this month",
+      label: "Витрати (план)",
       value: formatCurrency(monthExpense),
-      hint: "From local transactions",
+      hint: "За цей місяць",
       tone: "text-danger-600",
     },
     {
-      label: "Income this month",
+      label: "Ще купити",
+      value: formatCurrency(pendingShoppingTotal),
+      hint: `${pendingShopping.length} пунктів у списку`,
+      tone: "text-warning-700",
+    },
+    {
+      label: "Дохід",
       value: formatCurrency(monthIncome),
-      hint: "From local transactions",
+      hint: "Аванс не враховано",
       tone: "text-success-600",
     },
   ];
@@ -66,13 +77,16 @@ export function DashboardView() {
           <Button variant="outline" size="sm" onClick={resetData}>
             Reset demo data
           </Button>
+          <Link href="/shopping">
+            <Button variant="secondary">Що купити</Button>
+          </Link>
           <Link href="/transactions">
-            <Button>Add transaction</Button>
+            <Button>Додати витрату</Button>
           </Link>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summary.map((item) => (
           <Card key={item.label}>
             <CardHeader>
@@ -90,26 +104,53 @@ export function DashboardView() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader>
-            <CardTitle>Budgets</CardTitle>
-            <CardDescription>Progress this period</CardDescription>
+          <CardHeader className="flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>Що купити</CardTitle>
+              <CardDescription>
+                Ще не придбано — наприклад, прокладки
+              </CardDescription>
+            </div>
+            <Link href="/shopping">
+              <Button variant="ghost" size="sm">
+                Усі
+              </Button>
+            </Link>
           </CardHeader>
           <CardContent>
-            <BudgetProgress budgets={budgetsWithProgress.slice(0, 3)} />
+            <ShoppingList
+              items={pendingShopping.slice(0, 6)}
+              onToggle={toggleShoppingBought}
+              onDelete={deleteShoppingItem}
+              emptyMessage="Усе зі списку вже куплено."
+            />
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader>
-            <CardTitle>Recent transactions</CardTitle>
-            <CardDescription>Latest activity</CardDescription>
+            <CardTitle>Останні витрати</CardTitle>
+            <CardDescription>План транзакцій</CardDescription>
           </CardHeader>
           <CardContent>
             <TransactionList
-              transactions={transactionsWithRelations.slice(0, 5)}
+              transactions={transactionsWithRelations
+                .filter((t) => t.type === "EXPENSE")
+                .slice(0, 5)}
             />
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Бюджети</CardTitle>
+          <CardDescription>Прогрес по категоріях</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <BudgetProgress budgets={budgetsWithProgress.slice(0, 4)} />
+        </CardContent>
+      </Card>
     </div>
   );
 }

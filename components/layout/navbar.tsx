@@ -10,6 +10,7 @@ import { setLocalSession } from "@/lib/local-db";
 const mobileNav = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/transactions", label: "Transactions" },
+  { href: "/shopping", label: "Що купити" },
   { href: "/categories", label: "Categories" },
   { href: "/budgets", label: "Budgets" },
   { href: "/accounts", label: "Accounts" },

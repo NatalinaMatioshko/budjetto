@@ -69,6 +69,26 @@ export interface Budget {
   updatedAt: Date;
 }
 
+/** Checklist item: що ще треба купити / зробити */
+export interface ShoppingItem {
+  id: string;
+  title: string;
+  amount: number | null;
+  categoryId: string | null;
+  notes: string | null;
+  bought: boolean;
+  boughtAt: Date | null;
+  /** Optional link to a planned expense transaction */
+  transactionId: string | null;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ShoppingItemWithRelations extends ShoppingItem {
+  category?: Pick<Category, "id" | "name" | "color" | "icon"> | null;
+}
+
 /** Transaction with related display fields for lists/tables */
 export interface TransactionWithRelations extends Transaction {
   account?: Pick<Account, "id" | "name">;

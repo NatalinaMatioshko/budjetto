@@ -12,6 +12,7 @@ import {
 import type {
   AccountType,
   BudgetWithProgress,
+  ShoppingItemWithRelations,
   TransactionType,
   TransactionWithRelations,
 } from "@/types";
@@ -20,15 +21,18 @@ import {
   addAccount,
   addBudget,
   addCategory,
+  addShoppingItem,
   addTransaction,
   createSeedDb,
   deleteAccount,
   deleteBudget,
   deleteCategory,
+  deleteShoppingItem,
   deleteTransaction,
   loadLocalDb,
   resetLocalDb,
   saveLocalDb,
+  toggleShoppingBought,
   type LocalDb,
 } from "@/lib/local-db";
 
@@ -37,6 +41,9 @@ interface LocalBudgetContextValue {
   db: LocalDb;
   transactionsWithRelations: TransactionWithRelations[];
   budgetsWithProgress: BudgetWithProgress[];
+  shoppingItemsWithRelations: ShoppingItemWithRelations[];
+  pendingShopping: ShoppingItemWithRelations[];
+  pendingShoppingTotal: number;
   totalBalance: number;
   monthExpense: number;
   monthIncome: number;
@@ -71,6 +78,14 @@ interface LocalBudgetContextValue {
     categoryId?: string | null;
   }) => void;
   deleteBudget: (id: string) => void;
+  addShoppingItem: (input: {
+    title: string;
+    amount?: number | null;
+    categoryId?: string | null;
+    notes?: string | null;
+  }) => void;
+  toggleShoppingBought: (id: string, bought: boolean) => void;
+  deleteShoppingItem: (id: string) => void;
   resetData: () => void;
 }
 
@@ -146,6 +161,33 @@ export function LocalBudgetProvider({ children }: { children: ReactNode }) {
       }
     );
 
+    const shoppingItemsWithRelations: ShoppingItemWithRelations[] = [
+      ...db.shoppingItems,
+    ]
+      .sort((a, b) => Number(a.bought) - Number(b.bought))
+      .map((item) => {
+        const category = item.categoryId
+          ? categoryMap.get(item.categoryId)
+          : undefined;
+        return {
+          ...item,
+          category: category
+            ? {
+                id: category.id,
+                name: category.name,
+                color: category.color,
+                icon: category.icon,
+              }
+            : null,
+        };
+      });
+
+    const pendingShopping = shoppingItemsWithRelations.filter((i) => !i.bought);
+    const pendingShoppingTotal = pendingShopping.reduce(
+      (sum, item) => sum + (item.amount ?? 0),
+      0
+    );
+
     const from = startOfMonth().getTime();
     const to = endOfMonth().getTime();
 
@@ -168,6 +210,9 @@ export function LocalBudgetProvider({ children }: { children: ReactNode }) {
       db,
       transactionsWithRelations,
       budgetsWithProgress,
+      shoppingItemsWithRelations,
+      pendingShopping,
+      pendingShoppingTotal,
       totalBalance: db.accounts.reduce((sum, a) => sum + a.balance, 0),
       monthExpense,
       monthIncome,
@@ -180,6 +225,10 @@ export function LocalBudgetProvider({ children }: { children: ReactNode }) {
         commit(deleteTransaction(db, transactionId)),
       addBudget: (input) => commit(addBudget(db, input)),
       deleteBudget: (budgetId) => commit(deleteBudget(db, budgetId)),
+      addShoppingItem: (input) => commit(addShoppingItem(db, input)),
+      toggleShoppingBought: (itemId, bought) =>
+        commit(toggleShoppingBought(db, itemId, bought)),
+      deleteShoppingItem: (itemId) => commit(deleteShoppingItem(db, itemId)),
       resetData: () => commit(resetLocalDb()),
     };
   }, [commit, db, ready]);

@@ -3,11 +3,12 @@ import type {
   AccountType,
   Budget,
   Category,
+  ShoppingItem,
   Transaction,
   TransactionType,
 } from "@/types";
 
-export const LOCAL_DB_KEY = "budjetto:local-db:v2";
+export const LOCAL_DB_KEY = "budjetto:local-db:v3";
 export const LOCAL_SESSION_KEY = "budjetto:local-session";
 
 export interface LocalDb {
@@ -15,6 +16,7 @@ export interface LocalDb {
   categories: Category[];
   transactions: Transaction[];
   budgets: Budget[];
+  shoppingItems: ShoppingItem[];
 }
 
 const USER_ID = "local-user";
@@ -374,7 +376,140 @@ export function createSeedDb(): LocalDb {
     updatedAt: createdAt,
   }));
 
-  return { accounts, categories, transactions, budgets };
+  // Що купити: паралельно до витрат. bought=false = ще не придбано.
+  const shoppingSeed: Array<{
+    id: string;
+    title: string;
+    amount: number;
+    categoryId: string;
+    transactionId: string;
+    bought: boolean;
+    notes?: string;
+  }> = [
+    {
+      id: "shop_mobile",
+      title: "Поповнення мобільного",
+      amount: 200,
+      categoryId: "cat_link",
+      transactionId: "tx_mobile",
+      bought: false,
+    },
+    {
+      id: "shop_gemini",
+      title: "Gemini",
+      amount: 230,
+      categoryId: "cat_subs",
+      transactionId: "tx_gemini",
+      bought: false,
+    },
+    {
+      id: "shop_manicure",
+      title: "Манікюр і педикюр",
+      amount: 2000,
+      categoryId: "cat_care",
+      transactionId: "tx_manicure",
+      bought: false,
+    },
+    {
+      id: "shop_mom",
+      title: "Віддати мамі",
+      amount: 2000,
+      categoryId: "cat_debts",
+      transactionId: "tx_mom",
+      bought: false,
+    },
+    {
+      id: "shop_cursor",
+      title: "Cursor + YouTube",
+      amount: 1300,
+      categoryId: "cat_subs",
+      transactionId: "tx_cursor_yt",
+      bought: false,
+    },
+    {
+      id: "shop_cats",
+      title: "Корм для котів",
+      amount: 3812,
+      categoryId: "cat_cats",
+      transactionId: "tx_cats",
+      bought: false,
+    },
+    {
+      id: "shop_haircut",
+      title: "Стрижка",
+      amount: 800,
+      categoryId: "cat_care",
+      transactionId: "tx_haircut",
+      bought: false,
+    },
+    {
+      id: "shop_credit_h",
+      title: "Кредит чоловіка",
+      amount: 490,
+      categoryId: "cat_credits",
+      transactionId: "tx_credit_h",
+      bought: false,
+    },
+    {
+      id: "shop_credit_me",
+      title: "Мій кредит",
+      amount: 328,
+      categoryId: "cat_credits",
+      transactionId: "tx_credit_me",
+      bought: false,
+    },
+    {
+      id: "shop_transport",
+      title: "Проїзд чоловікові",
+      amount: 2400,
+      categoryId: "cat_transport",
+      transactionId: "tx_transport",
+      bought: false,
+    },
+    {
+      id: "shop_paint",
+      title: "Фарба",
+      amount: 300,
+      categoryId: "cat_personal",
+      transactionId: "tx_paint",
+      bought: false,
+      notes: "План 200–300 грн",
+    },
+    {
+      id: "shop_pads",
+      title: "Прокладки",
+      amount: 115,
+      categoryId: "cat_hygiene",
+      transactionId: "tx_hygiene",
+      bought: false,
+      notes: "Ще не куплені",
+    },
+    {
+      id: "shop_coffee",
+      title: "Пачка кави додому",
+      amount: 400,
+      categoryId: "cat_groceries",
+      transactionId: "tx_coffee",
+      bought: false,
+      notes: "План 300–400 грн",
+    },
+  ];
+
+  const shoppingItems: ShoppingItem[] = shoppingSeed.map((item) => ({
+    id: item.id,
+    title: item.title,
+    amount: item.amount,
+    categoryId: item.categoryId,
+    notes: item.notes ?? null,
+    bought: item.bought,
+    boughtAt: item.bought ? createdAt : null,
+    transactionId: item.transactionId,
+    userId: USER_ID,
+    createdAt,
+    updatedAt: createdAt,
+  }));
+
+  return { accounts, categories, transactions, budgets, shoppingItems };
 }
 
 function reviveDates<T>(item: T, keys: (keyof T)[]): T {
@@ -393,19 +528,22 @@ export function serializeDb(db: LocalDb): string {
 }
 
 export function parseDb(raw: string): LocalDb {
-  const parsed = JSON.parse(raw) as LocalDb;
+  const parsed = JSON.parse(raw) as Partial<LocalDb>;
   return {
-    accounts: parsed.accounts.map((a) =>
+    accounts: (parsed.accounts ?? []).map((a) =>
       reviveDates(a, ["createdAt", "updatedAt"])
     ),
-    categories: parsed.categories.map((c) =>
+    categories: (parsed.categories ?? []).map((c) =>
       reviveDates(c, ["createdAt", "updatedAt"])
     ),
-    transactions: parsed.transactions.map((t) =>
+    transactions: (parsed.transactions ?? []).map((t) =>
       reviveDates(t, ["date", "createdAt", "updatedAt"])
     ),
-    budgets: parsed.budgets.map((b) =>
+    budgets: (parsed.budgets ?? []).map((b) =>
       reviveDates(b, ["startDate", "endDate", "createdAt", "updatedAt"])
+    ),
+    shoppingItems: (parsed.shoppingItems ?? []).map((s) =>
+      reviveDates(s, ["boughtAt", "createdAt", "updatedAt"])
     ),
   };
 }
@@ -656,5 +794,60 @@ export function deleteBudget(db: LocalDb, budgetId: string): LocalDb {
   return {
     ...db,
     budgets: db.budgets.filter((b) => b.id !== budgetId),
+  };
+}
+
+export function addShoppingItem(
+  db: LocalDb,
+  input: {
+    title: string;
+    amount?: number | null;
+    categoryId?: string | null;
+    notes?: string | null;
+    transactionId?: string | null;
+  }
+): LocalDb {
+  const createdAt = now();
+  const item: ShoppingItem = {
+    id: id("shop"),
+    title: input.title.trim(),
+    amount: input.amount ?? null,
+    categoryId: input.categoryId ?? null,
+    notes: input.notes ?? null,
+    bought: false,
+    boughtAt: null,
+    transactionId: input.transactionId ?? null,
+    userId: USER_ID,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  return { ...db, shoppingItems: [item, ...db.shoppingItems] };
+}
+
+export function toggleShoppingBought(
+  db: LocalDb,
+  itemId: string,
+  bought: boolean
+): LocalDb {
+  const updatedAt = now();
+  return {
+    ...db,
+    shoppingItems: db.shoppingItems.map((item) =>
+      item.id === itemId
+        ? {
+            ...item,
+            bought,
+            boughtAt: bought ? updatedAt : null,
+            updatedAt,
+          }
+        : item
+    ),
+  };
+}
+
+export function deleteShoppingItem(db: LocalDb, itemId: string): LocalDb {
+  return {
+    ...db,
+    shoppingItems: db.shoppingItems.filter((item) => item.id !== itemId),
   };
 }

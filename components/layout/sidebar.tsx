@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: DashboardIcon },
   { href: "/transactions", label: "Transactions", icon: TransactionsIcon },
+  { href: "/shopping", label: "Що купити", icon: ShoppingIcon },
   { href: "/categories", label: "Categories", icon: CategoriesIcon },
   { href: "/budgets", label: "Budgets", icon: BudgetsIcon },
   { href: "/accounts", label: "Accounts", icon: AccountsIcon },
@@ -62,6 +63,18 @@ function TransactionsIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+    </svg>
+  );
+}
+
+function ShoppingIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 5h6M9 9h6M9 13h4M5 3h14a1 1 0 011 1v16l-4-2-4 2-4-2-4 2V4a1 1 0 011-1z"
+      />
     </svg>
   );
 }
