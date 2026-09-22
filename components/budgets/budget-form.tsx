@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { useLocalBudget } from "@/components/providers/local-budget-provider";
 
 function monthInputValue(d: Date) {
@@ -61,28 +62,16 @@ export function BudgetForm() {
         required
         defaultValue={monthInputValue(end)}
       />
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="budgetCategoryId"
-          className="text-sm font-medium text-slate-700"
-        >
-          Category
-        </label>
-        <select
-          id="budgetCategoryId"
-          name="categoryId"
-          className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-        >
-          <option value="">All expenses</option>
-          {db.categories
-            .filter((c) => c.type === "EXPENSE")
-            .map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-        </select>
-      </div>
+      <Select id="budgetCategoryId" name="categoryId" label="Category">
+        <option value="">All expenses</option>
+        {db.categories
+          .filter((c) => c.type === "EXPENSE")
+          .map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+      </Select>
       <Button type="submit" isLoading={isSubmitting} className="w-full">
         Add budget
       </Button>

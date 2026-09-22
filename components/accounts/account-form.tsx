@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import type { AccountType } from "@/types";
 import { useLocalBudget } from "@/components/providers/local-budget-provider";
 
@@ -36,23 +37,13 @@ export function AccountForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <Input name="name" label="Name" required placeholder="Checking" />
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="type" className="text-sm font-medium text-slate-700">
-          Type
-        </label>
-        <select
-          id="type"
-          name="type"
-          defaultValue="CHECKING"
-          className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-        >
-          {ACCOUNT_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select id="type" name="type" label="Type" defaultValue="CHECKING">
+        {ACCOUNT_TYPES.map((type) => (
+          <option key={type} value={type}>
+            {type}
+          </option>
+        ))}
+      </Select>
       <Input
         name="balance"
         label="Opening balance"

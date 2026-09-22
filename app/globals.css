@@ -3,14 +3,40 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f4f4f5;
+  --foreground: #09090b;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --border: #e4e4e7;
+  --muted: #71717a;
+  --accent: #2f6fed;
+}
+
+.dark {
+  --background: #000000;
+  --foreground: #fafafa;
+  --surface: #0a0a0a;
+  --surface-2: #121212;
+  --border: rgba(255, 255, 255, 0.1);
+  --muted: #a1a1aa;
+  --accent: #2f6fed;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  color-scheme: light;
+}
+
+.dark body {
+  color-scheme: dark;
+}
+
+/* Native <option> list inherits readable colors from color-scheme */
+select option {
+  background-color: var(--surface);
+  color: var(--foreground);
 }
 
 @layer utilities {

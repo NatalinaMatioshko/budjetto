@@ -101,7 +101,12 @@ export interface BudgetWithProgress extends Budget {
   progressPercent: number;
 }
 
-export interface ApiError {
-  error: string;
-  details?: unknown;
+export interface CategorySpendBlock {
+  id: string;
+  name: string;
+  color: string | null;
+  icon: string | null;
+  spent: number;
+  budget: number | null;
+  items: TransactionWithRelations[];
 }

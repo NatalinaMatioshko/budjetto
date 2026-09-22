@@ -1,27 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { setLocalSession } from "@/lib/local-db";
-
-const mobileNav = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/transactions", label: "Transactions" },
-  { href: "/shopping", label: "Що купити" },
-  { href: "/categories", label: "Categories" },
-  { href: "/budgets", label: "Budgets" },
-  { href: "/accounts", label: "Accounts" },
-] as const;
+import { useShell } from "@/components/layout/app-shell";
+import { useTheme } from "@/components/providers/theme-provider";
 
 /**
- * Top navigation bar with logo and mobile menu toggle.
+ * Top bar: hamburger, theme toggle, sign out.
  */
 export function Navbar() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const { mobileOpen, toggleMobile } = useShell();
+  const { theme, toggleTheme } = useTheme();
 
   function handleSignOut() {
     setLocalSession(false);
@@ -29,32 +20,41 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+    <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-zinc-950/90">
+      <div className="flex h-14 items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden"
-            aria-label="Toggle navigation"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-zinc-600 transition-colors hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/10 desktop:hidden"
+            aria-label="Open navigation"
+            aria-expanded={mobileOpen}
+            onClick={toggleMobile}
           >
-            <MenuIcon open={open} />
+            <MenuIcon open={mobileOpen} />
           </button>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
-              B
-            </span>
-            <span className="text-lg font-semibold tracking-tight text-slate-900">
-              Budjetto
-            </span>
-          </Link>
+          <span className="text-base font-semibold text-zinc-900 dark:text-white desktop:hidden">
+            Budjetto
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="hidden text-xs font-medium text-slate-400 sm:inline">
+          <span className="hidden text-xs font-medium text-zinc-400 sm:inline">
             Local mode
           </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            type="button"
+            onClick={toggleTheme}
+            aria-label={
+              theme === "dark" ? "Увімкнути світлу тему" : "Увімкнути темну тему"
+            }
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+            <span className="hidden sm:inline">
+              {theme === "dark" ? "Світла" : "Темна"}
+            </span>
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -64,26 +64,6 @@ export function Navbar() {
             Sign out
           </Button>
         </div>
-      </div>
-
-      <div
-        className={cn(
-          "border-t border-slate-100 bg-white lg:hidden",
-          open ? "block" : "hidden"
-        )}
-      >
-        <nav className="flex flex-col gap-1 px-4 py-3">
-          {mobileNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
       </div>
     </header>
   );
@@ -111,6 +91,22 @@ function MenuIcon({ open }: { open: boolean }) {
           d="M4 6h16M4 12h16M4 18h16"
         />
       )}
+    </svg>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05L5.636 5.636m12.728 0L16.95 7.05M7.05 16.95l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
     </svg>
   );
 }

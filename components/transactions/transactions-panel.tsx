@@ -6,12 +6,16 @@ import { TransactionFilters } from "@/components/transactions/transaction-filter
 import { TransactionList } from "@/components/transactions/transaction-list";
 
 /**
- * Client wrapper that wires filters to the transactions table.
+ * Filters + transaction cards with edit/delete.
  */
 export function TransactionsPanel({
   transactions,
+  onEdit,
+  onDelete,
 }: {
   transactions: TransactionWithRelations[];
+  onEdit?: (tx: TransactionWithRelations) => void;
+  onDelete?: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<"ALL" | TransactionType>("ALL");
@@ -30,14 +34,18 @@ export function TransactionsPanel({
   }, [transactions, query, type]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <TransactionFilters
         query={query}
         type={type}
         onQueryChange={setQuery}
         onTypeChange={setType}
       />
-      <TransactionList transactions={filtered} />
+      <TransactionList
+        transactions={filtered}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -8,8 +9,21 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        desktop: "1368px",
+      },
       colors: {
-        // Brand / primary — blue–indigo scale
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        surface: {
+          DEFAULT: "var(--surface)",
+          2: "var(--surface-2)",
+        },
+        border: "var(--border)",
+        muted: "var(--muted)",
+        accent: {
+          DEFAULT: "var(--accent)",
+        },
         primary: {
           50: "#eef2ff",
           100: "#e0e7ff",
@@ -24,7 +38,6 @@ const config: Config = {
           950: "#1e1b4b",
           DEFAULT: "#4f46e5",
         },
-        // Success — green
         success: {
           50: "#f0fdf4",
           100: "#dcfce7",
@@ -38,7 +51,6 @@ const config: Config = {
           900: "#14532d",
           DEFAULT: "#16a34a",
         },
-        // Warning — yellow / amber
         warning: {
           50: "#fefce8",
           100: "#fef9c3",
@@ -52,7 +64,6 @@ const config: Config = {
           900: "#713f12",
           DEFAULT: "#ca8a04",
         },
-        // Danger — red
         danger: {
           50: "#fef2f2",
           100: "#fee2e2",
@@ -66,8 +77,6 @@ const config: Config = {
           900: "#7f1d1d",
           DEFAULT: "#dc2626",
         },
-        background: "var(--background)",
-        foreground: "var(--foreground)",
       },
     },
   },

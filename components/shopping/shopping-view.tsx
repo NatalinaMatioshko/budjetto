@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -11,6 +12,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useLocalBudget } from "@/components/providers/local-budget-provider";
 import { ShoppingForm } from "@/components/shopping/shopping-form";
 import { ShoppingList } from "@/components/shopping/shopping-list";
+import type { ShoppingItemWithRelations } from "@/types";
 
 export function ShoppingView() {
   const {
@@ -22,8 +24,12 @@ export function ShoppingView() {
     deleteShoppingItem,
   } = useLocalBudget();
 
+  const [editing, setEditing] = useState<ShoppingItemWithRelations | null>(
+    null
+  );
+
   if (!ready) {
-    return <p className="text-sm text-slate-500">Завантаження…</p>;
+    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Завантаження…</p>;
   }
 
   const pending = shoppingItemsWithRelations.filter((i) => !i.bought);
@@ -32,11 +38,12 @@ export function ShoppingView() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
           Що купити
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Чекліст покупок поруч із планом витрат. Відмічай, коли вже купила.
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Чекліст покупок поруч із планом витрат. Додавай, редагуй і відмічай
+          куплене.
         </p>
       </div>
 
@@ -49,7 +56,7 @@ export function ShoppingView() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               На суму{" "}
               <span className="font-semibold tabular-nums">
                 {formatCurrency(pendingShoppingTotal)}
@@ -65,7 +72,7 @@ export function ShoppingView() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               з {shoppingItemsWithRelations.length} пунктів у списку
             </p>
           </CardContent>
@@ -75,11 +82,22 @@ export function ShoppingView() {
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
         <Card>
           <CardHeader>
-            <CardTitle>Новий пункт</CardTitle>
-            <CardDescription>Додай те, що треба придбати</CardDescription>
+            <CardTitle>
+              {editing ? "Редагувати пункт" : "Новий пункт"}
+            </CardTitle>
+            <CardDescription>
+              {editing
+                ? "Онови назву, суму чи категорію"
+                : "Додай те, що треба придбати"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <ShoppingForm />
+            <ShoppingForm
+              key={editing?.id ?? "new"}
+              initial={editing}
+              onCancel={editing ? () => setEditing(null) : undefined}
+              onSaved={() => setEditing(null)}
+            />
           </CardContent>
         </Card>
 
@@ -96,6 +114,7 @@ export function ShoppingView() {
               <ShoppingList
                 items={pending}
                 onToggle={toggleShoppingBought}
+                onEdit={setEditing}
                 onDelete={deleteShoppingItem}
                 emptyMessage="Усе куплено — список порожній."
               />
@@ -106,12 +125,15 @@ export function ShoppingView() {
             <Card>
               <CardHeader>
                 <CardTitle>Куплено</CardTitle>
-                <CardDescription>Можна зняти галочку, якщо помилково</CardDescription>
+                <CardDescription>
+                  Можна зняти галочку, якщо помилково
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ShoppingList
                   items={done}
                   onToggle={toggleShoppingBought}
+                  onEdit={setEditing}
                   onDelete={deleteShoppingItem}
                 />
               </CardContent>

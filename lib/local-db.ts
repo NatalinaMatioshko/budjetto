@@ -8,10 +8,27 @@ import type {
   TransactionType,
 } from "@/types";
 
-export const LOCAL_DB_KEY = "budjetto:local-db:v3";
+export const LOCAL_DB_KEY = "budjetto:local-db:v17";
 export const LOCAL_SESSION_KEY = "budjetto:local-session";
+/** Bump when seed content changes — forces re-seed if storage is stale */
+export const SEED_REVISION = 17;
+
+/** If any of these are missing from storage, re-seed (guards polluted hot-reload saves) */
+const SEED_MARKER_TX_IDS = [
+  "tx_income_advance",
+  "tx_income_tutoring_150",
+  "tx_fora_61",
+  "tx_buckcoffee",
+  "tx_shawarma_22",
+  "tx_transport_50",
+  "tx_installment_1750",
+  "tx_installment_500",
+  "tx_dr_pepper",
+] as const;
 
 export interface LocalDb {
+  /** Matches SEED_REVISION when data came from current seed */
+  seedRevision?: number;
   accounts: Account[];
   categories: Category[];
   transactions: Transaction[];
@@ -45,20 +62,19 @@ function monthBounds(reference = new Date()) {
 }
 
 /**
- * Початкові дані бюджету (вересень).
- * Основний дохід: 33 800 грн.
- * Аванс ~9 000 грн (орієнтовно 22.09) свідомо НЕ включений у залишок.
- * Діапазони (фарба, кава) взяті по верхній межі для безпечного плану.
+ * Початкові дані (вересень).
+ * Дохід (ЗП): 33 800 грн. Аванс ~9 000 грн не включено.
+ * Категорії витрат за структурою бюджету + рахунок накопичення.
  */
 export function createSeedDb(): LocalDb {
-  // Фіксуємо вересень 2026 під поточний план
   const planMonth = new Date(2026, 8, 10);
   const createdAt = planMonth;
   const { start, end } = monthBounds(planMonth);
   const incomeDate = new Date(2026, 8, 1);
 
   const MAIN_INCOME = 33800;
-  // Верхні межі діапазонів: фарба 200–300 → 300, кава 300–400 → 400
+  const SAVINGS_START = 0;
+
   const expenses: Array<{
     id: string;
     categoryId: string;
@@ -66,33 +82,13 @@ export function createSeedDb(): LocalDb {
     amount: number;
     day: number;
   }> = [
-    {
-      id: "tx_mobile",
-      categoryId: "cat_link",
-      description: "Поповнення мобільного рахунку",
-      amount: 200,
-      day: 5,
-    },
+    // Підписки
     {
       id: "tx_gemini",
       categoryId: "cat_subs",
       description: "Gemini",
       amount: 230,
       day: 6,
-    },
-    {
-      id: "tx_manicure",
-      categoryId: "cat_care",
-      description: "Манікюр і педикюр",
-      amount: 2000,
-      day: 7,
-    },
-    {
-      id: "tx_mom",
-      categoryId: "cat_debts",
-      description: "Віддати мамі",
-      amount: 2000,
-      day: 8,
     },
     {
       id: "tx_cursor_yt",
@@ -102,11 +98,19 @@ export function createSeedDb(): LocalDb {
       day: 9,
     },
     {
-      id: "tx_cats",
-      categoryId: "cat_cats",
-      description: "Корм",
-      amount: 3812,
-      day: 10,
+      id: "tx_netflix",
+      categoryId: "cat_subs",
+      description: "Netflix",
+      amount: 520,
+      day: 17,
+    },
+    // Догляд
+    {
+      id: "tx_manicure",
+      categoryId: "cat_care",
+      description: "Манікюр і педикюр",
+      amount: 2000,
+      day: 7,
     },
     {
       id: "tx_haircut",
@@ -115,52 +119,515 @@ export function createSeedDb(): LocalDb {
       amount: 800,
       day: 11,
     },
+    // Косметика
+    {
+      id: "tx_pads",
+      categoryId: "cat_cosmetics",
+      description: "Прокладки",
+      amount: 115,
+      day: 15,
+    },
+    {
+      id: "tx_makeup",
+      categoryId: "cat_cosmetics",
+      description: "Makeup",
+      amount: 3116,
+      day: 18,
+    },
+    {
+      id: "tx_shampoo",
+      categoryId: "cat_cosmetics",
+      description: "Шампунь",
+      amount: 160,
+      day: 14,
+    },
+    // Коти
+    {
+      id: "tx_cats",
+      categoryId: "cat_cats",
+      description: "Корм",
+      amount: 3812,
+      day: 10,
+    },
+    // Продукти / їжа
+    {
+      id: "tx_holodets",
+      categoryId: "cat_food",
+      description: "Холодець",
+      amount: 193,
+      day: 18,
+    },
+    {
+      id: "tx_kolo",
+      categoryId: "cat_food",
+      description: "Коло — продукти",
+      amount: 125,
+      day: 18,
+    },
+    {
+      id: "tx_atb",
+      categoryId: "cat_food",
+      description: "АТБ — продукти",
+      amount: 151,
+      day: 19,
+    },
+    {
+      id: "tx_shava",
+      categoryId: "cat_food",
+      description: "Шавуха (їжа на роботі)",
+      amount: 350,
+      day: 19,
+    },
+    {
+      id: "tx_silpo",
+      categoryId: "cat_food",
+      description: "Сільпо — продукти",
+      amount: 330,
+      day: 20,
+    },
+    {
+      id: "tx_roshen",
+      categoryId: "cat_food",
+      description: "Рошен — продукти",
+      amount: 450,
+      day: 20,
+    },
+    {
+      id: "tx_products",
+      categoryId: "cat_food",
+      description: "Продукти",
+      amount: 40,
+      day: 21,
+    },
+    {
+      id: "tx_gurman",
+      categoryId: "cat_food",
+      description: "Гурман — вода / їжа",
+      amount: 36,
+      day: 21,
+    },
+    {
+      id: "tx_water",
+      categoryId: "cat_food",
+      description: "Вода",
+      amount: 26,
+      day: 13,
+    },
+    {
+      id: "tx_sweets_coffee",
+      categoryId: "cat_food",
+      description: "Цукерки, круасани, пакетики розчинної кави",
+      amount: 495,
+      day: 14,
+    },
+    // Поповнення
+    {
+      id: "tx_topup",
+      categoryId: "cat_topup",
+      description: "Поповнення мобільного рахунку",
+      amount: 200,
+      day: 5,
+    },
+    // Транспорт
+    {
+      id: "tx_uklon_1",
+      categoryId: "cat_transport",
+      description: "Uklon — таксі",
+      amount: 470,
+      day: 18,
+    },
+    {
+      id: "tx_uklon_2",
+      categoryId: "cat_transport",
+      description: "Uklon — таксі",
+      amount: 511,
+      day: 19,
+    },
+    {
+      id: "tx_kyiv_digital",
+      categoryId: "cat_transport",
+      description: "Київ Цифровий — проїзний",
+      amount: 1250,
+      day: 20,
+    },
+    // Непередбачені
+    {
+      id: "tx_aurora",
+      categoryId: "cat_unexpected",
+      description: "Аврора — світильник",
+      amount: 261,
+      day: 21,
+    },
+    {
+      id: "tx_sanya_bd",
+      categoryId: "cat_unexpected",
+      description: "Скинулись Сані на ДН (на роботі)",
+      amount: 500,
+      day: 22,
+    },
+    {
+      id: "tx_flowers_mom",
+      categoryId: "cat_unexpected",
+      description: "Квіти мамі на ДН",
+      amount: 775,
+      day: 12,
+    },
+    {
+      id: "tx_garbage",
+      categoryId: "cat_unexpected",
+      description: "Оплата за переробку сміття",
+      amount: 76,
+      day: 13,
+    },
+    {
+      id: "tx_shoes",
+      categoryId: "cat_unexpected",
+      description: "Взуття чоловікові (2 пари)",
+      amount: 3952,
+      day: 14,
+    },
+    {
+      id: "tx_theater",
+      categoryId: "cat_unexpected",
+      description: "Квиток у театр",
+      amount: 770,
+      day: 15,
+    },
+    {
+      id: "tx_garden_gloves",
+      categoryId: "cat_unexpected",
+      description: "Рукавиці для роботи в саду",
+      amount: 28,
+      day: 11,
+    },
+    // Кава
+    {
+      id: "tx_coffee_cafe_1",
+      categoryId: "cat_coffee",
+      description: "Фільтр-кава в кав'ярні",
+      amount: 120,
+      day: 13,
+    },
+    {
+      id: "tx_coffee_cafe_2",
+      categoryId: "cat_coffee",
+      description: "Фільтр-кава в кав'ярні",
+      amount: 150,
+      day: 14,
+    },
+    // Здоров’я
+    {
+      id: "tx_vitamins",
+      categoryId: "cat_health",
+      description: "Вітаміни",
+      amount: 4190,
+      day: 18,
+    },
+    // Борги
+    {
+      id: "tx_mom",
+      categoryId: "cat_debts",
+      description: "Віддати мамі",
+      amount: 2000,
+      day: 8,
+    },
     {
       id: "tx_credit_h",
-      categoryId: "cat_credits",
+      categoryId: "cat_debts",
       description: "Кредит чоловіка",
       amount: 490,
       day: 12,
     },
     {
       id: "tx_credit_me",
-      categoryId: "cat_credits",
+      categoryId: "cat_debts",
       description: "Мій кредит",
       amount: 328,
       day: 12,
     },
+    // —— 17.09 ——
     {
-      id: "tx_transport",
-      categoryId: "cat_transport",
-      description: "Чоловікові на проїзд до роботи",
-      amount: 2400,
-      day: 13,
+      id: "tx_drips",
+      categoryId: "cat_coffee",
+      description: "Дріпи (2 шт × 55)",
+      amount: 110,
+      day: 17,
     },
     {
-      id: "tx_paint",
-      categoryId: "cat_personal",
-      description: "Фарба (план до 300 грн)",
-      amount: 300,
+      id: "tx_pads_hygiene",
+      categoryId: "cat_cosmetics",
+      description: "Прокладки гігієнічні",
+      amount: 73,
+      day: 17,
+    },
+    {
+      id: "tx_baton",
+      categoryId: "cat_food",
+      description: "Батон",
+      amount: 29,
+      day: 17,
+    },
+    {
+      id: "tx_water_30",
+      categoryId: "cat_food",
+      description: "Вода",
+      amount: 30,
+      day: 17,
+    },
+    {
+      id: "tx_water_35",
+      categoryId: "cat_food",
+      description: "Вода",
+      amount: 35,
+      day: 17,
+    },
+    {
+      id: "tx_badyoryi",
+      categoryId: "cat_food",
+      description: "Бадьорий — вафлі, печиво",
+      amount: 182,
+      day: 17,
+    },
+    {
+      id: "tx_internet",
+      categoryId: "cat_unexpected",
+      description: "Інтернет",
+      amount: 444,
+      day: 17,
+    },
+    // —— 18.09 ——
+    {
+      id: "tx_dad_18",
+      categoryId: "cat_unexpected",
+      description: "Татові — порошок, корм для котів, кава",
+      amount: 100,
+      day: 18,
+    },
+    // —— 19.09 ——
+    {
+      id: "tx_dad_19",
+      categoryId: "cat_unexpected",
+      description: "Татові — кава і магаз",
+      amount: 105,
+      day: 19,
+    },
+    {
+      id: "tx_apostrophe_140",
+      categoryId: "cat_coffee",
+      description: "Кава Апостроф",
+      amount: 140,
+      day: 19,
+    },
+    {
+      id: "tx_apostrophe_200",
+      categoryId: "cat_coffee",
+      description: "Кава Апостроф",
+      amount: 200,
+      day: 19,
+    },
+    {
+      id: "tx_coffee_i_150",
+      categoryId: "cat_coffee",
+      description: "Кава (І)",
+      amount: 150,
+      day: 19,
+    },
+    {
+      id: "tx_insight_85",
+      categoryId: "cat_coffee",
+      description: "Кава та десерт Insight",
+      amount: 85,
+      day: 19,
+    },
+    {
+      id: "tx_insight_185",
+      categoryId: "cat_coffee",
+      description: "Кава та десерт Insight",
+      amount: 185,
+      day: 19,
+    },
+    {
+      id: "tx_shawarma",
+      categoryId: "cat_food",
+      description: "Шаурма",
+      amount: 200,
+      day: 19,
+    },
+    // —— 20.09 ——
+    {
+      id: "tx_epicentr",
+      categoryId: "cat_unexpected",
+      description: "Епіцентр",
+      amount: 100,
+      day: 20,
+    },
+    {
+      id: "tx_aurora_markers",
+      categoryId: "cat_unexpected",
+      description: "Аврора — маркери",
+      amount: 10,
+      day: 20,
+    },
+    {
+      id: "tx_bookstore",
+      categoryId: "cat_unexpected",
+      description: "Книгарня",
+      amount: 1691,
+      day: 20,
+    },
+    {
+      id: "tx_zoo_ahat",
+      categoryId: "cat_unexpected",
+      description: "Зоо — ахатинка",
+      amount: 80,
+      day: 20,
+    },
+    // —— 21.09 ——
+    {
+      id: "tx_aurora_water",
+      categoryId: "cat_food",
+      description: "Аврора — вода",
+      amount: 9,
+      day: 21,
+    },
+    {
+      id: "tx_pizza",
+      categoryId: "cat_food",
+      description: "Піца",
+      amount: 639,
+      day: 21,
+    },
+    {
+      id: "tx_apple_cloud",
+      categoryId: "cat_subs",
+      description: "Підписка Apple Cloud",
+      amount: 450,
+      day: 21,
+    },
+    // —— 22.09 ——
+    {
+      id: "tx_fora_61",
+      categoryId: "cat_food",
+      description: "Фора — вода і кава",
+      amount: 61,
+      day: 22,
+    },
+    {
+      id: "tx_buckcoffee",
+      categoryId: "cat_coffee",
+      description: "Кава Buckcoffee",
+      amount: 100,
+      day: 22,
+    },
+    {
+      id: "tx_shawarma_22",
+      categoryId: "cat_food",
+      description: "Шаурма",
+      amount: 325,
+      day: 22,
+    },
+    {
+      id: "tx_transport_50",
+      categoryId: "cat_transport",
+      description: "Проїзд",
+      amount: 50,
+      day: 22,
+    },
+    {
+      id: "tx_installment_1750",
+      categoryId: "cat_debts",
+      description: "Щомісячний платіж розстрочки",
+      amount: 1750,
+      day: 22,
+    },
+    {
+      id: "tx_installment_500",
+      categoryId: "cat_debts",
+      description: "Щомісячний платіж розстрочки",
+      amount: 500,
+      day: 22,
+    },
+    {
+      id: "tx_dr_pepper",
+      categoryId: "cat_food",
+      description: "Вода Doctor Pepper",
+      amount: 38,
+      day: 22,
+    },
+  ];
+
+  const extraIncomes: Array<{
+    id: string;
+    description: string;
+    amount: number;
+    day: number;
+  }> = [
+    {
+      id: "tx_income_tutoring_200",
+      description: "Викладання — внесок у сімейний бюджет",
+      amount: 200,
+      day: 22,
+    },
+    {
+      id: "tx_income_contrib_76",
+      description: "Внесок у сімейний бюджет",
+      amount: 76,
       day: 14,
     },
     {
-      id: "tx_hygiene",
-      categoryId: "cat_hygiene",
-      description: "Прокладки",
-      amount: 115,
+      id: "tx_income_contrib_36",
+      description: "Внесок у сімейний бюджет",
+      amount: 36,
       day: 15,
     },
     {
-      id: "tx_coffee",
-      categoryId: "cat_groceries",
-      description: "Пачка кави додому (план до 400 грн)",
-      amount: 400,
-      day: 16,
+      id: "tx_income_tutoring_770",
+      description: "Викладання — внесок у сімейний бюджет",
+      amount: 770,
+      day: 13,
+    },
+    {
+      id: "tx_income_tutoring_100",
+      description: "Дохід з викладання",
+      amount: 100,
+      day: 17,
+    },
+    {
+      id: "tx_income_tutoring_105",
+      description: "Дохід з викладання",
+      amount: 105,
+      day: 18,
+    },
+    {
+      id: "tx_income_tutoring_200b",
+      description: "Дохід з викладання",
+      amount: 200,
+      day: 19,
+    },
+    {
+      id: "tx_income_tutoring_124",
+      description: "Дохід з викладання",
+      amount: 124,
+      day: 20,
+    },
+    {
+      id: "tx_income_advance",
+      description: "Аванс",
+      amount: 14400,
+      day: 22,
+    },
+    {
+      id: "tx_income_tutoring_150",
+      description: "Дохід з викладання англ",
+      amount: 150,
+      day: 22,
     },
   ];
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const remaining = MAIN_INCOME - totalExpenses;
+  const totalExtraIncome = extraIncomes.reduce((sum, i) => sum + i.amount, 0);
+  const remaining =
+    MAIN_INCOME + totalExtraIncome - totalExpenses - SAVINGS_START;
 
   const accounts: Account[] = [
     {
@@ -173,25 +640,25 @@ export function createSeedDb(): LocalDb {
       createdAt,
       updatedAt: createdAt,
     },
-  ];
-
-  const categories: Category[] = [
     {
-      id: "cat_income",
-      name: "Дохід",
-      icon: "₴",
-      color: "#16a34a",
-      type: "INCOME",
+      id: "acc_savings",
+      name: "Накопичення",
+      type: "SAVINGS",
+      balance: SAVINGS_START,
+      currency: CURRENCY,
       userId: USER_ID,
       createdAt,
       updatedAt: createdAt,
     },
+  ];
+
+  const categories: Category[] = [
     {
-      id: "cat_link",
-      name: "Зв’язок",
-      icon: "З",
-      color: "#0ea5e9",
-      type: "EXPENSE",
+      id: "cat_salary",
+      name: "ЗП",
+      icon: "₴",
+      color: "#16a34a",
+      type: "INCOME",
       userId: USER_ID,
       createdAt,
       updatedAt: createdAt,
@@ -217,10 +684,10 @@ export function createSeedDb(): LocalDb {
       updatedAt: createdAt,
     },
     {
-      id: "cat_debts",
-      name: "Борги",
-      icon: "Б",
-      color: "#dc2626",
+      id: "cat_cosmetics",
+      name: "Косметичні засоби",
+      icon: "Кз",
+      color: "#e11d48",
       type: "EXPENSE",
       userId: USER_ID,
       createdAt,
@@ -228,8 +695,8 @@ export function createSeedDb(): LocalDb {
     },
     {
       id: "cat_cats",
-      name: "Коти",
-      icon: "К",
+      name: "Котам",
+      icon: "🐱",
       color: "#ca8a04",
       type: "EXPENSE",
       userId: USER_ID,
@@ -237,10 +704,20 @@ export function createSeedDb(): LocalDb {
       updatedAt: createdAt,
     },
     {
-      id: "cat_credits",
-      name: "Кредити",
-      icon: "Кр",
-      color: "#b45309",
+      id: "cat_food",
+      name: "Продукти / їжа",
+      icon: "Пр",
+      color: "#84cc16",
+      type: "EXPENSE",
+      userId: USER_ID,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    {
+      id: "cat_topup",
+      name: "Щомісячне поповнення рахунку",
+      icon: "📱",
+      color: "#0ea5e9",
       type: "EXPENSE",
       userId: USER_ID,
       createdAt,
@@ -250,26 +727,36 @@ export function createSeedDb(): LocalDb {
       id: "cat_transport",
       name: "Транспорт",
       icon: "Т",
-      color: "#0891b2",
+      color: "#0284c7",
       type: "EXPENSE",
       userId: USER_ID,
       createdAt,
       updatedAt: createdAt,
     },
     {
-      id: "cat_personal",
-      name: "Особисте",
-      icon: "О",
-      color: "#7c3aed",
+      id: "cat_unexpected",
+      name: "Непередбачені витрати",
+      icon: "!",
+      color: "#f97316",
       type: "EXPENSE",
       userId: USER_ID,
       createdAt,
       updatedAt: createdAt,
     },
     {
-      id: "cat_hygiene",
-      name: "Гігієна",
-      icon: "Г",
+      id: "cat_coffee",
+      name: "Кава",
+      icon: "☕",
+      color: "#65a30d",
+      type: "EXPENSE",
+      userId: USER_ID,
+      createdAt,
+      updatedAt: createdAt,
+    },
+    {
+      id: "cat_health",
+      name: "Лікування / вітаміни",
+      icon: "+",
       color: "#059669",
       type: "EXPENSE",
       userId: USER_ID,
@@ -277,10 +764,10 @@ export function createSeedDb(): LocalDb {
       updatedAt: createdAt,
     },
     {
-      id: "cat_groceries",
-      name: "Продукти / кава",
-      icon: "Пр",
-      color: "#65a30d",
+      id: "cat_debts",
+      name: "Борги / кредити",
+      icon: "Б",
+      color: "#dc2626",
       type: "EXPENSE",
       userId: USER_ID,
       createdAt,
@@ -290,18 +777,30 @@ export function createSeedDb(): LocalDb {
 
   const transactions: Transaction[] = [
     {
-      id: "tx_income_main",
+      id: "tx_income_salary",
       amount: MAIN_INCOME,
       type: "INCOME",
-      description: "Основний дохід (аванс ~9 000 грн 22.09 не включено)",
+      description: "ЗП (основна частина)",
       date: incomeDate,
       userId: USER_ID,
       accountId: "acc_main",
-      categoryId: "cat_income",
+      categoryId: "cat_salary",
       createdAt,
       updatedAt: createdAt,
     },
-    ...expenses.map((e) => ({
+    ...extraIncomes.map((i, index) => ({
+      id: i.id,
+      amount: i.amount,
+      type: "INCOME" as const,
+      description: i.description,
+      date: new Date(2026, 8, i.day),
+      userId: USER_ID,
+      accountId: "acc_main",
+      categoryId: "cat_salary",
+      createdAt: new Date(2026, 8, i.day, 18, 0, index),
+      updatedAt: createdAt,
+    })),
+    ...expenses.map((e, index) => ({
       id: e.id,
       amount: e.amount,
       type: "EXPENSE" as const,
@@ -310,188 +809,104 @@ export function createSeedDb(): LocalDb {
       userId: USER_ID,
       accountId: "acc_main",
       categoryId: e.categoryId,
-      createdAt,
+      // Later in seed = added later → shows higher within the same day
+      createdAt: new Date(2026, 8, e.day, 12, 0, index),
       updatedAt: createdAt,
     })),
   ];
 
-  const budgetByCategory: Array<{
-    id: string;
-    name: string;
-    categoryId: string;
-    amount: number;
-  }> = [
-    { id: "bud_link", name: "Зв’язок", categoryId: "cat_link", amount: 200 },
+  const budgets: Budget[] = [
+    { id: "bud_subs", name: "Підписки", categoryId: "cat_subs", amount: 2500 },
     {
-      id: "bud_subs",
-      name: "Підписки",
-      categoryId: "cat_subs",
-      amount: 1530,
+      id: "bud_care",
+      name: "Догляд",
+      categoryId: "cat_care",
+      amount: 2800,
     },
-    { id: "bud_care", name: "Догляд", categoryId: "cat_care", amount: 2800 },
-    { id: "bud_debts", name: "Борги", categoryId: "cat_debts", amount: 2000 },
-    { id: "bud_cats", name: "Коти", categoryId: "cat_cats", amount: 3812 },
     {
-      id: "bud_credits",
-      name: "Кредити",
-      categoryId: "cat_credits",
-      amount: 818,
+      id: "bud_cosmetics",
+      name: "Косметичні засоби",
+      categoryId: "cat_cosmetics",
+      amount: 3464,
+    },
+    { id: "bud_cats", name: "Котам", categoryId: "cat_cats", amount: 3812 },
+    {
+      id: "bud_food",
+      name: "Продукти / їжа",
+      categoryId: "cat_food",
+      amount: 3744,
+    },
+    {
+      id: "bud_topup",
+      name: "Поповнення рахунку",
+      categoryId: "cat_topup",
+      amount: 200,
     },
     {
       id: "bud_transport",
       name: "Транспорт",
       categoryId: "cat_transport",
-      amount: 2400,
+      amount: 2281,
     },
     {
-      id: "bud_personal",
-      name: "Особисте",
-      categoryId: "cat_personal",
-      amount: 300,
+      id: "bud_unexpected",
+      name: "Непередбачені",
+      categoryId: "cat_unexpected",
+      amount: 8892,
+    },
+    { id: "bud_coffee", name: "Кава", categoryId: "cat_coffee", amount: 1240 },
+    {
+      id: "bud_health",
+      name: "Лікування / вітаміни",
+      categoryId: "cat_health",
+      amount: 4190,
     },
     {
-      id: "bud_hygiene",
-      name: "Гігієна",
-      categoryId: "cat_hygiene",
-      amount: 115,
+      id: "bud_debts",
+      name: "Борги / кредити",
+      categoryId: "cat_debts",
+      amount: 5068,
     },
-    {
-      id: "bud_groceries",
-      name: "Продукти / кава",
-      categoryId: "cat_groceries",
-      amount: 400,
-    },
-  ];
-
-  const budgets: Budget[] = budgetByCategory.map((b) => ({
-    id: b.id,
-    name: b.name,
-    amount: b.amount,
-    spent: b.amount,
+  ].map((b) => ({
+    ...b,
+    spent: expenses
+      .filter((e) => e.categoryId === b.categoryId)
+      .reduce((s, e) => s + e.amount, 0),
     startDate: start,
     endDate: end,
     userId: USER_ID,
-    categoryId: b.categoryId,
     createdAt,
     updatedAt: createdAt,
   }));
 
-  // Що купити: паралельно до витрат. bought=false = ще не придбано.
   const shoppingSeed: Array<{
     id: string;
     title: string;
     amount: number;
     categoryId: string;
-    transactionId: string;
-    bought: boolean;
+    transactionId?: string | null;
     notes?: string;
   }> = [
     {
-      id: "shop_mobile",
-      title: "Поповнення мобільного",
-      amount: 200,
-      categoryId: "cat_link",
-      transactionId: "tx_mobile",
-      bought: false,
-    },
-    {
-      id: "shop_gemini",
-      title: "Gemini",
-      amount: 230,
-      categoryId: "cat_subs",
-      transactionId: "tx_gemini",
-      bought: false,
-    },
-    {
-      id: "shop_manicure",
-      title: "Манікюр і педикюр",
-      amount: 2000,
-      categoryId: "cat_care",
-      transactionId: "tx_manicure",
-      bought: false,
-    },
-    {
-      id: "shop_mom",
-      title: "Віддати мамі",
-      amount: 2000,
-      categoryId: "cat_debts",
-      transactionId: "tx_mom",
-      bought: false,
-    },
-    {
-      id: "shop_cursor",
-      title: "Cursor + YouTube",
-      amount: 1300,
-      categoryId: "cat_subs",
-      transactionId: "tx_cursor_yt",
-      bought: false,
-    },
-    {
-      id: "shop_cats",
-      title: "Корм для котів",
-      amount: 3812,
-      categoryId: "cat_cats",
-      transactionId: "tx_cats",
-      bought: false,
-    },
-    {
-      id: "shop_haircut",
-      title: "Стрижка",
-      amount: 800,
-      categoryId: "cat_care",
-      transactionId: "tx_haircut",
-      bought: false,
-    },
-    {
-      id: "shop_credit_h",
-      title: "Кредит чоловіка",
-      amount: 490,
-      categoryId: "cat_credits",
-      transactionId: "tx_credit_h",
-      bought: false,
-    },
-    {
-      id: "shop_credit_me",
-      title: "Мій кредит",
-      amount: 328,
-      categoryId: "cat_credits",
-      transactionId: "tx_credit_me",
-      bought: false,
+      id: "shop_paint",
+      title: "Фарба (план до 300 грн)",
+      amount: 300,
+      categoryId: "cat_cosmetics",
+      notes: "План — ще не куплено",
     },
     {
       id: "shop_transport",
-      title: "Проїзд чоловікові",
+      title: "Чоловікові на проїзд до роботи",
       amount: 2400,
       categoryId: "cat_transport",
-      transactionId: "tx_transport",
-      bought: false,
-    },
-    {
-      id: "shop_paint",
-      title: "Фарба",
-      amount: 300,
-      categoryId: "cat_personal",
-      transactionId: "tx_paint",
-      bought: false,
-      notes: "План 200–300 грн",
-    },
-    {
-      id: "shop_pads",
-      title: "Прокладки",
-      amount: 115,
-      categoryId: "cat_hygiene",
-      transactionId: "tx_hygiene",
-      bought: false,
-      notes: "Ще не куплені",
+      notes: "План — ще не витрачено",
     },
     {
       id: "shop_coffee",
-      title: "Пачка кави додому",
+      title: "Пачка кави додому (план до 400 грн)",
       amount: 400,
-      categoryId: "cat_groceries",
-      transactionId: "tx_coffee",
-      bought: false,
-      notes: "План 300–400 грн",
+      categoryId: "cat_coffee",
+      notes: "План — ще не куплено",
     },
   ];
 
@@ -501,15 +916,22 @@ export function createSeedDb(): LocalDb {
     amount: item.amount,
     categoryId: item.categoryId,
     notes: item.notes ?? null,
-    bought: item.bought,
-    boughtAt: item.bought ? createdAt : null,
-    transactionId: item.transactionId,
+    bought: false,
+    boughtAt: null,
+    transactionId: item.transactionId ?? null,
     userId: USER_ID,
     createdAt,
     updatedAt: createdAt,
   }));
 
-  return { accounts, categories, transactions, budgets, shoppingItems };
+  return {
+    seedRevision: SEED_REVISION,
+    accounts,
+    categories,
+    transactions,
+    budgets,
+    shoppingItems,
+  };
 }
 
 function reviveDates<T>(item: T, keys: (keyof T)[]): T {
@@ -530,6 +952,7 @@ export function serializeDb(db: LocalDb): string {
 export function parseDb(raw: string): LocalDb {
   const parsed = JSON.parse(raw) as Partial<LocalDb>;
   return {
+    seedRevision: parsed.seedRevision,
     accounts: (parsed.accounts ?? []).map((a) =>
       reviveDates(a, ["createdAt", "updatedAt"])
     ),
@@ -553,14 +976,32 @@ export function loadLocalDb(): LocalDb {
   try {
     const raw = window.localStorage.getItem(LOCAL_DB_KEY);
     if (!raw) {
-      const seed = createSeedDb();
-      window.localStorage.setItem(LOCAL_DB_KEY, serializeDb(seed));
-      return seed;
+      return persistSeed();
     }
-    return parseDb(raw);
+    const db = parseDb(raw);
+    const revisionOk = db.seedRevision === SEED_REVISION;
+    const markersOk = SEED_MARKER_TX_IDS.every((id) =>
+      db.transactions.some((t) => t.id === id)
+    );
+    if (!revisionOk || !markersOk) {
+      return persistSeed();
+    }
+    return db;
   } catch {
-    return createSeedDb();
+    return persistSeed();
   }
+}
+
+function persistSeed(): LocalDb {
+  const seed = createSeedDb();
+  if (typeof window !== "undefined") {
+    // Drop older seed keys so stale HMR data cannot linger
+    for (let v = 1; v < SEED_REVISION; v++) {
+      window.localStorage.removeItem(`budjetto:local-db:v${v}`);
+    }
+    window.localStorage.setItem(LOCAL_DB_KEY, serializeDb(seed));
+  }
+  return seed;
 }
 
 export function saveLocalDb(db: LocalDb) {
@@ -569,9 +1010,7 @@ export function saveLocalDb(db: LocalDb) {
 }
 
 export function resetLocalDb(): LocalDb {
-  const seed = createSeedDb();
-  saveLocalDb(seed);
-  return seed;
+  return persistSeed();
 }
 
 export function setLocalSession(active: boolean) {
@@ -760,6 +1199,72 @@ export function deleteTransaction(db: LocalDb, transactionId: string): LocalDb {
   });
 }
 
+export function updateTransaction(
+  db: LocalDb,
+  transactionId: string,
+  input: {
+    amount: number;
+    type: TransactionType;
+    description?: string | null;
+    date?: Date;
+    accountId: string;
+    categoryId?: string | null;
+  }
+): LocalDb {
+  const existing = db.transactions.find((t) => t.id === transactionId);
+  if (!existing) return db;
+
+  const updatedAt = now();
+  let accounts = db.accounts.map((account) => {
+    if (account.id !== existing.accountId) return account;
+    return {
+      ...account,
+      balance: applyTransactionToBalance(
+        account.balance,
+        existing.type,
+        existing.amount,
+        -1
+      ),
+      updatedAt,
+    };
+  });
+
+  accounts = accounts.map((account) => {
+    if (account.id !== input.accountId) return account;
+    return {
+      ...account,
+      balance: applyTransactionToBalance(
+        account.balance,
+        input.type,
+        input.amount,
+        1
+      ),
+      updatedAt,
+    };
+  });
+
+  const transactions = db.transactions.map((t) =>
+    t.id === transactionId
+      ? {
+          ...t,
+          amount: input.amount,
+          type: input.type,
+          description: input.description ?? null,
+          date: input.date ?? t.date,
+          accountId: input.accountId,
+          categoryId: input.categoryId ?? null,
+          updatedAt,
+        }
+      : t
+  );
+
+  return recalculateBudgetSpent({
+    ...db,
+    accounts,
+    transactions,
+  });
+}
+
 export function addBudget(
   db: LocalDb,
   input: {
@@ -824,6 +1329,34 @@ export function addShoppingItem(
   return { ...db, shoppingItems: [item, ...db.shoppingItems] };
 }
 
+export function updateShoppingItem(
+  db: LocalDb,
+  itemId: string,
+  input: {
+    title: string;
+    amount?: number | null;
+    categoryId?: string | null;
+    notes?: string | null;
+  }
+): LocalDb {
+  const updatedAt = now();
+  return {
+    ...db,
+    shoppingItems: db.shoppingItems.map((item) =>
+      item.id === itemId
+        ? {
+            ...item,
+            title: input.title.trim(),
+            amount: input.amount ?? null,
+            categoryId: input.categoryId ?? null,
+            notes: input.notes ?? null,
+            updatedAt,
+          }
+        : item
+    ),
+  };
+}
+
 export function toggleShoppingBought(
   db: LocalDb,
   itemId: string,
@@ -849,5 +1382,54 @@ export function deleteShoppingItem(db: LocalDb, itemId: string): LocalDb {
   return {
     ...db,
     shoppingItems: db.shoppingItems.filter((item) => item.id !== itemId),
+  };
+}
+
+/**
+ * Відкласти гроші з основного рахунку на накопичення.
+ */
+export function addToSavings(db: LocalDb, amount: number, note?: string): LocalDb {
+  if (amount <= 0) return db;
+
+  const main = db.accounts.find((a) => a.id === "acc_main");
+  const savings = db.accounts.find((a) => a.id === "acc_savings");
+  if (!main || !savings || main.balance < amount) return db;
+
+  const createdAt = now();
+  const tx: Transaction = {
+    id: id("tx"),
+    amount,
+    type: "TRANSFER",
+    description: note?.trim() || "Відкладено на накопичення",
+    date: createdAt,
+    userId: USER_ID,
+    accountId: "acc_main",
+    categoryId: null,
+    createdAt,
+    updatedAt: createdAt,
+  };
+
+  const accounts = db.accounts.map((account) => {
+    if (account.id === "acc_main") {
+      return {
+        ...account,
+        balance: account.balance - amount,
+        updatedAt: createdAt,
+      };
+    }
+    if (account.id === "acc_savings") {
+      return {
+        ...account,
+        balance: account.balance + amount,
+        updatedAt: createdAt,
+      };
+    }
+    return account;
+  });
+
+  return {
+    ...db,
+    accounts,
+    transactions: [tx, ...db.transactions],
   };
 }

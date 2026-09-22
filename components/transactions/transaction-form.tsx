@@ -1,29 +1,67 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import type { CreateTransactionInput } from "@/lib/validations";
-import type { Account, Category, TransactionType } from "@/types";
+import type { Account, Category, Transaction, TransactionType } from "@/types";
 
 export interface TransactionFormProps {
   accounts: Pick<Account, "id" | "name">[];
   categories: Pick<Category, "id" | "name" | "type">[];
   onSubmit?: (data: CreateTransactionInput) => void | Promise<void>;
+  onCancel?: () => void;
+  defaultType?: TransactionType;
+  defaultCategoryId?: string | null;
+  /** When set, form edits this transaction */
+  initial?: Pick<
+    Transaction,
+    | "amount"
+    | "type"
+    | "description"
+    | "date"
+    | "accountId"
+    | "categoryId"
+  > | null;
+  submitLabel?: string;
 }
 
 const TYPES: TransactionType[] = ["EXPENSE", "INCOME", "TRANSFER"];
 
+const TYPE_LABELS: Record<TransactionType, string> = {
+  EXPENSE: "Витрата",
+  INCOME: "Дохід",
+  TRANSFER: "Переказ",
+};
+
+function toDateInput(value: Date | string) {
+  const d = value instanceof Date ? value : new Date(value);
+  return d.toISOString().slice(0, 10);
+}
+
 /**
- * Placeholder form for creating a transaction (client-side only for now).
+ * Form for creating or editing a transaction (local storage).
  */
 export function TransactionForm({
   accounts,
   categories,
   onSubmit,
+  onCancel,
+  defaultType = "EXPENSE",
+  defaultCategoryId = null,
+  initial = null,
+  submitLabel,
 }: TransactionFormProps) {
-  const [type, setType] = useState<TransactionType>("EXPENSE");
+  const isEdit = Boolean(initial);
+  const [type, setType] = useState<TransactionType>(
+    initial?.type ?? defaultType
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (initial) setType(initial.type);
+  }, [initial]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,8 +81,10 @@ export function TransactionForm({
     setIsSubmitting(true);
     try {
       await onSubmit?.(payload);
-      event.currentTarget.reset();
-      setType("EXPENSE");
+      if (!isEdit) {
+        event.currentTarget.reset();
+        setType(defaultType);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -64,81 +104,97 @@ export function TransactionForm({
             onClick={() => setType(t)}
             className={
               type === t
-                ? "rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white"
-                : "rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200"
+                ? "rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white dark:bg-[#2f6fed]"
+                : "rounded-lg bg-zinc-100 px-3 py-1.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
             }
           >
-            {t}
+            {TYPE_LABELS[t]}
           </button>
         ))}
       </div>
 
       <Input
+        key={`amount-${initial?.amount ?? "new"}`}
         name="amount"
-        label="Amount"
+        label="Сума"
         type="number"
         step="0.01"
         min="0"
         required
         placeholder="0.00"
+        defaultValue={initial?.amount ?? ""}
       />
 
       <Input
+        key={`desc-${initial?.description ?? "new"}`}
         name="description"
-        label="Description"
-        placeholder="Groceries, salary, rent…"
+        label="Опис"
+        placeholder="Продукти, ЗП, оренда…"
+        defaultValue={initial?.description ?? ""}
       />
 
       <Input
+        key={`date-${initial ? toDateInput(initial.date) : "new"}`}
         name="date"
-        label="Date"
+        label="Дата"
         type="date"
-        defaultValue={new Date().toISOString().slice(0, 10)}
+        defaultValue={
+          initial ? toDateInput(initial.date) : new Date().toISOString().slice(0, 10)
+        }
       />
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="accountId" className="text-sm font-medium text-slate-700">
-          Account
-        </label>
-        <select
-          id="accountId"
-          name="accountId"
-          required
-          className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-        >
-          <option value="">Select account</option>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        key={`account-${initial?.accountId ?? "new"}`}
+        id="accountId"
+        name="accountId"
+        label="Рахунок"
+        required
+        defaultValue={initial?.accountId ?? accounts[0]?.id ?? ""}
+      >
+        <option value="">Оберіть рахунок</option>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.name}
+          </option>
+        ))}
+      </Select>
 
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="categoryId"
-          className="text-sm font-medium text-slate-700"
-        >
-          Category
-        </label>
-        <select
-          id="categoryId"
-          name="categoryId"
-          className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-        >
-          <option value="">Uncategorized</option>
-          {filteredCategories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Select
+        key={`category-${initial?.categoryId ?? defaultCategoryId ?? "new"}-${type}`}
+        id="categoryId"
+        name="categoryId"
+        label="Категорія"
+        defaultValue={
+          initial?.categoryId ?? defaultCategoryId ?? ""
+        }
+      >
+        <option value="">Без категорії</option>
+        {filteredCategories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </Select>
 
-      <Button type="submit" isLoading={isSubmitting} className="w-full">
-        Add transaction
-      </Button>
+      <div className="flex gap-2">
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={onCancel}
+          >
+            Скасувати
+          </Button>
+        )}
+        <Button
+          type="submit"
+          isLoading={isSubmitting}
+          className={onCancel ? "flex-1" : "w-full"}
+        >
+          {submitLabel ?? (isEdit ? "Зберегти" : "Додати")}
+        </Button>
+      </div>
     </form>
   );
 }
