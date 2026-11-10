@@ -67,7 +67,7 @@ export function TransactionList({
       if (list) list.push(tx);
       else map.set(key, [tx]);
     }
-    const result: MonthGroup[] = [...map.entries()]
+    const result: MonthGroup[] = Array.from(map.entries())
       .sort((a, b) => b[0].localeCompare(a[0]))
       .map(([key, items]) => ({
         key,

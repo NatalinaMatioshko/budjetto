@@ -33,10 +33,8 @@ import {
   deleteShoppingItem,
   deleteTransaction,
   loadLocalDb,
-  LOCAL_DB_KEY,
   resetLocalDb,
   saveLocalDb,
-  SEED_REVISION,
   toggleShoppingBought,
   updateShoppingItem,
   updateTransaction,
@@ -143,11 +141,6 @@ export function LocalBudgetProvider({ children }: { children: ReactNode }) {
     setDb(loadLocalDb());
     setReady(true);
   }, []);
-
-  // Hot-reload: re-check storage when seed version constants change
-  useEffect(() => {
-    setDb(loadLocalDb());
-  }, [LOCAL_DB_KEY, SEED_REVISION]);
 
   const commit = useCallback((next: LocalDb) => {
     setDb(next);

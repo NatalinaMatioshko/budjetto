@@ -47,20 +47,6 @@ function id(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
 }
 
-function monthBounds(reference = new Date()) {
-  const start = new Date(reference.getFullYear(), reference.getMonth(), 1);
-  const end = new Date(
-    reference.getFullYear(),
-    reference.getMonth() + 1,
-    0,
-    23,
-    59,
-    59,
-    999
-  );
-  return { start, end };
-}
-
 /**
  * Початкові дані з Excel «Сімейний_бюджет_07-09_26-10_2026.xlsx».
  * Період 07.09.2026–10.11.2026.

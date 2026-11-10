@@ -4,7 +4,15 @@ Family budget tracker built with **Next.js 14 (App Router)**, **TypeScript**, an
 
 ## Current mode: local browser only
 
-All accounts, categories, transactions, budgets, and shopping items are stored in the browser’s **`localStorage`**. No cloud, no deploy, no login required for day-to-day use.
+All accounts, categories, transactions, budgets, and shopping items are stored in the browser’s **`localStorage`**. No backend login required.
+
+## Live site (GitHub Pages)
+
+After enabling **Settings → Pages → Source: GitHub Actions**, the app is available at:
+
+**https://natalinamatioshko.github.io/budjetto/**
+
+(`https://github.com/NatalinaMatioshko/budjetto` is only the code repository — not the running app.)
 
 ## Getting started
 
