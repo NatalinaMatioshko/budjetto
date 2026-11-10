@@ -53,8 +53,10 @@ interface LocalBudgetContextValue {
   pendingShoppingTotal: number;
   expenseBlocks: CategorySpendBlock[];
   incomeTotal: number;
+  expenseTotal: number;
   incomeTransactions: TransactionWithRelations[];
   mainBalance: number;
+  personalBalance: number;
   savingsBalance: number;
   savingsTransfers: TransactionWithRelations[];
   totalBalance: number;
@@ -273,8 +275,12 @@ export function LocalBudgetProvider({ children }: { children: ReactNode }) {
       (sum, tx) => sum + tx.amount,
       0
     );
+    const expenseTotal = db.transactions
+      .filter((tx) => tx.type === "EXPENSE")
+      .reduce((sum, tx) => sum + tx.amount, 0);
 
     const mainBalance = accountMap.get("acc_main")?.balance ?? 0;
+    const personalBalance = accountMap.get("acc_personal")?.balance ?? 0;
     const savingsBalance = accountMap.get("acc_savings")?.balance ?? 0;
     const savingsTransfers = transactionsWithRelations.filter(
       (tx) =>
@@ -309,8 +315,10 @@ export function LocalBudgetProvider({ children }: { children: ReactNode }) {
       pendingShoppingTotal,
       expenseBlocks,
       incomeTotal,
+      expenseTotal,
       incomeTransactions,
       mainBalance,
+      personalBalance,
       savingsBalance,
       savingsTransfers,
       totalBalance: db.accounts.reduce((sum, a) => sum + a.balance, 0),

@@ -49,14 +49,27 @@ export function CategoryMediaCard({
           "dark:border-white/10 dark:bg-[#0a0a0a] dark:shadow-none"
         )}
       >
-        <div className="relative h-40 w-full overflow-hidden sm:h-44">
+        <div
+          className={cn(
+            "relative w-full overflow-hidden",
+            visual?.objectFit === "contain"
+              ? "h-52 bg-zinc-200 sm:h-56 dark:bg-zinc-900"
+              : "h-40 sm:h-44"
+          )}
+        >
           {visual ? (
             <Image
               src={visual.image}
               alt={visual.imageAlt}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              className={cn(
+                "transition-transform duration-500 group-hover:scale-105",
+                visual.objectFit === "contain"
+                  ? "object-contain"
+                  : "object-cover",
+                visual.objectPosition
+              )}
             />
           ) : (
             <div

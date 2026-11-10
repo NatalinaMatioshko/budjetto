@@ -14,7 +14,7 @@ import {
  * Expense categories as dark media cards (reference layout).
  */
 export function ExpensesView() {
-  const { ready, expenseBlocks, monthExpense } = useLocalBudget();
+  const { ready, expenseBlocks, expenseTotal } = useLocalBudget();
 
   if (!ready) {
     return (
@@ -35,7 +35,7 @@ export function ExpensesView() {
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             Категорії · разом{" "}
             <span className="font-medium text-zinc-700 dark:text-zinc-200">
-              {formatCurrency(monthExpense)}
+              {formatCurrency(expenseTotal)}
             </span>
           </p>
         </div>
@@ -54,7 +54,7 @@ export function ExpensesView() {
           blocks={expenseBlocks}
           linkMode="transactions"
           showProgress
-          totalExpenses={monthExpense}
+          totalExpenses={expenseTotal}
         />
       </CategoryShowcase>
     </div>

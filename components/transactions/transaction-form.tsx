@@ -6,6 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { CreateTransactionInput } from "@/lib/validations";
 import type { Account, Category, Transaction, TransactionType } from "@/types";
+import {
+  MAIN_ACCOUNT_ID,
+  PERSONAL_ACCOUNT_ID,
+  sortAccountsForSelect,
+} from "@/lib/budget-structure";
 
 export interface TransactionFormProps {
   accounts: Pick<Account, "id" | "name">[];
@@ -93,6 +98,13 @@ export function TransactionForm({
   const filteredCategories = categories.filter(
     (c) => c.type === type || type === "TRANSFER"
   );
+  const orderedAccounts = sortAccountsForSelect(accounts);
+  // За замовчуванням с.б.; о.р. лише якщо вже вибрано / у initial
+  const defaultAccountId =
+    initial?.accountId ??
+    (orderedAccounts.some((a) => a.id === MAIN_ACCOUNT_ID)
+      ? MAIN_ACCOUNT_ID
+      : orderedAccounts[0]?.id ?? "");
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -149,15 +161,21 @@ export function TransactionForm({
         name="accountId"
         label="Рахунок"
         required
-        defaultValue={initial?.accountId ?? accounts[0]?.id ?? ""}
+        defaultValue={defaultAccountId}
       >
-        <option value="">Оберіть рахунок</option>
-        {accounts.map((a) => (
+        {orderedAccounts.map((a) => (
           <option key={a.id} value={a.id}>
-            {a.name}
+            {a.id === MAIN_ACCOUNT_ID
+              ? "Сімейний бюджет (с.б.) — за замовчуванням"
+              : a.id === PERSONAL_ACCOUNT_ID
+                ? "Особистий рахунок (о.р.)"
+                : a.name}
           </option>
         ))}
       </Select>
+      <p className="text-xs text-zinc-500">
+        Якщо не позначено о.р. — витрата йде на с.б.
+      </p>
 
       <Select
         key={`category-${initial?.categoryId ?? defaultCategoryId ?? "new"}-${type}`}

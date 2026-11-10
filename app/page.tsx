@@ -29,12 +29,7 @@ export default function HomePage() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/dashboard">
-            <Button size="lg">Open app</Button>
-          </Link>
-          <Link href="/register">
-            <Button size="lg" variant="outline">
-              Get started
-            </Button>
+            <Button size="lg">Відкрити додаток</Button>
           </Link>
         </div>
       </div>

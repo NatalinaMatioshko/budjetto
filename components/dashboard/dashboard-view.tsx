@@ -19,8 +19,10 @@ export function DashboardView() {
   const {
     ready,
     incomeTotal,
-    monthExpense,
+    expenseTotal,
     totalBalance,
+    mainBalance,
+    personalBalance,
     savingsBalance,
     expenseBlocks,
     pendingShopping,
@@ -55,37 +57,53 @@ export function DashboardView() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <OverviewCard
-          title="Дохід"
-          amount={incomeTotal}
-          hint="ЗП цього місяця"
-          href="/transactions?type=income"
-          tone="success"
-          icon={<IncomeIcon />}
+          title="Сімейний бюджет (с.б.)"
+          amount={mainBalance}
+          hint="Основний рахунок родини"
+          href="/accounts"
+          tone="primary"
+          icon={<AccountsIcon />}
         />
         <OverviewCard
-          title="Витрати"
-          amount={monthExpense}
-          hint="Сума по всіх категоріях"
-          href="/transactions?type=expense"
-          tone="danger"
-          icon={<ExpenseIcon />}
+          title="Особистий рахунок (о.р.)"
+          amount={personalBalance}
+          hint="Твій окремий рахунок"
+          href="/accounts"
+          tone="purple"
+          icon={<AccountsIcon />}
         />
         <OverviewCard
           title="Накопичення"
           amount={savingsBalance}
           hint="Відкладено на майбутнє"
           href="/savings"
-          tone="primary"
+          tone="success"
           icon={<SavingsIcon />}
         />
         <OverviewCard
-          title="Рахунки"
+          title="Дохід"
+          amount={incomeTotal}
+          hint="Усі надходження за період"
+          href="/transactions?type=income"
+          tone="success"
+          icon={<IncomeIcon />}
+        />
+        <OverviewCard
+          title="Витрати"
+          amount={expenseTotal}
+          hint="Усі витрати за період"
+          href="/transactions?type=expense"
+          tone="danger"
+          icon={<ExpenseIcon />}
+        />
+        <OverviewCard
+          title="Разом на рахунках"
           amount={totalBalance}
-          hint="Усі рахунки разом"
+          hint="с.б. + о.р. + відкладені + накопичення"
           href="/accounts"
-          tone="purple"
+          tone="primary"
           icon={<AccountsIcon />}
         />
       </div>
@@ -105,7 +123,7 @@ export function DashboardView() {
           blocks={expenseBlocks}
           compact
           linkMode="transactions"
-          totalExpenses={monthExpense}
+          totalExpenses={expenseTotal}
         />
       </CategoryShowcase>
 
